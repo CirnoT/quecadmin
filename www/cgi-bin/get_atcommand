@@ -1,0 +1,34 @@
+#!/bin/bash
+
+function urldecode() { : "${*//+/ }"; echo -e "${_//%/\\x}"; }
+
+QUERY_STRING=$(echo "${QUERY_STRING}" | sed 's/;//g')
+if [ "${QUERY_STRING}" ]; then
+    export IFS="&"
+    for p in ${QUERY_STRING}; do
+        if [ "$(echo $p | grep '=')" ]; then
+            k=$(echo $p | awk -F '=' '{print $1}')
+            v=$(echo $p | awk -F '=' '{print $2}')
+            eval $k=$v
+        fi
+    done
+fi
+
+if [[ "$timeout" =~ ^[0-9]+$ ]]; then
+    TIMEOUT=$timeout
+else
+    TIMEOUT=3
+fi
+
+AT_COMMAND=$(urldecode "$cmd")
+
+if [ -n "$(printf '%b\n' "${cmd//%/\\x}")" ]; then
+    AT_RESPONSE=$(echo -en "$AT_COMMAND\r\n" | atcmd -t $TIMEOUT)
+fi
+
+echo "Content-Type: text/plain"
+echo "Content-Length: ${#AT_RESPONSE}"
+echo "Cache-Control: no-cache, no-store"
+echo "Connection: close"
+echo ""
+echo -n $AT_RESPONSE

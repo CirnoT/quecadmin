@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QuecAdmin :: SMS</title>
+      <!-- Import all the bootstrap css files from css folder -->
+      <link rel="stylesheet" href="css/styles.css" />
+      <link rel="stylesheet" href="css/bootstrap.min.css" />
+
+      <!-- Logo -->
+      <link rel="simpleadmin-logo" href="favicon.ico" />
+
+      <!--  Import BootStrap Javascript -->
+      <script src="js/bootstrap.bundle.min.js"></script>
+      <script src="js/alpinejs.min.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <div class="container my-4" x-data="fetchSMS()">
+        <nav class="navbar navbar-expand-lg mt-2">
+          <div class="container-fluid">
+            <a class="navbar-brand" href="/"
+              ><span class="mb-0 h4">QuecAdmin</span></a
+            >
+            <button
+              class="navbar-toggler"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#navbarText"
+              aria-controls="navbarText"
+              aria-expanded="false"
+              aria-label="Toggle navigation"
+            >
+              <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarText">
+              <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                  <a class="nav-link" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/network.html">Network</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/scanner.html">Scan</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/settings.html">Settings</a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    class="nav-link active"
+                    href="/sms.html"
+                    aria-current="page"
+                    >SMS</a
+                  >
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/deviceinfo.html"
+                    >Device Information</a
+                  >
+                </li>
+              </ul>
+              <span class="navbar-text">
+                <button class="btn btn-link text-reset" id="darkModeToggle">
+                  Dark Mode
+                </button>
+              </span>
+            </div>
+          </div>
+        </nav>
+
+        <div class="row mt-5 mb-4">
+          <div class="col">
+            <div class="card">
+              <div class="card-header">SMS Inbox</div>
+              <div class="card-body">
+                <div class="card-text">
+                  <div class="col">
+                    <div style="
+                      max-height: 400px;
+                      overflow-y: auto;
+                      overflow-x: hidden;
+                    ">
+                      <div x-show="isLoading">
+                        <h4 class="text-center">Fetching messages...</h4>
+                      </div>
+                      <!-- Display when there are no messages -->
+                      <template x-if="messages.length == 0 && !isLoading">
+                        <div>
+                          <h4 class="text-center">No messages found</h4>
+                        </div>
+                      </template>
+                      <table class="table table-hover border-secondary" x-show="!isLoading && messages.length > 0">
+                        <tbody>
+                          <!-- "Loop display SMS messages" -->
+                          <template x-for="(message, index) in messages" :key="index">
+                            <tr>
+                              <td>
+                                <div class="form-check">
+                                  <input class="form-check-input" type="checkbox" :value="index" x-model="selectedMessages" />
+                                  <div class="row column-gap-1 mb-2">
+                                    <div class="col">
+                                      <p class="fw-bold" x-text="senders[index]"></p>
+                                    </div>
+                                    <div class="col text-end">
+                                      <p x-text="dates[index]"></p>
+                                    </div>
+                                  </div>
+                                  <div class="col">
+                                    <p class="text-break" x-text="message.text"></p>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          </template>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="d-flex align-items-center">
+                  <div class="col">
+                    <!-- Refresh button -->
+                    <button class="btn btn-success m-2" type="button" @click="init()">
+                      Refresh
+                    </button>
+                    <!-- Delete selected SMS button -->
+                    <button class="btn btn-danger m-2" type="button" x-show="!isLoading && messages.length > 0" @click="deleteSelectedSMS()">
+                      Delete Selected
+                    </button>
+                  </div>
+                  <div class="form-check" x-show="!isLoading && messages.length > 0">
+                    <input id="selectAllCheckbox" class="form-check-input" type="checkbox" @change="toggleAll($event)" />
+                    <label class="form-check-label">Select All</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script src="js/dark-mode.js"></script>
+    <script>
+      function fetchSMS() {
+        return {
+          isLoading: false,
+          atCommandResponse: "",
+          messages: [],
+          senders: [],
+          dates: [],
+          selectedMessages: [],
+          messageIndices: [],
+
+          clearData() {
+            this.messages = [];
+            this.senders = [];
+            this.dates = [];
+            this.selectedMessages = [];
+            this.messageIndices = [];
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            if (selectAllCheckbox) {
+              selectAllCheckbox.checked = false;
+            }
+          },
+
+          requestSMS() {
+            this.isLoading = true;
+            fetch(`/cgi-bin/get_atcommand?${new URLSearchParams({ cmd: "AT+CSMS=1;+CSDH=0;+CNMI=2,1,0,0,0;+CMGF=1;+CSCA?;+CSMP=17,167,0,8;+CPMS=\"ME\",\"ME\",\"ME\";+CSCS=\"UCS2\";+CMGL=\"ALL\"" })}`)
+              .then(response => response.text())
+              .then(data => {
+                this.atCommandResponse = data.replace("\r", "").trim();
+              })
+              .finally(() => {
+                this.isLoading = false;
+                this.clearData();
+                this.parseSMSData(this.atCommandResponse);
+              });
+          },
+
+          parseSMSData(data) {
+            const cmglRegex = /^\s*\+CMGL:\s*(\d+),"[^"]*","([^"]*)"[^"]*,"([^"]*)"/gm;
+            const cscaRegex = /^\s*\+CSCA:\s*"([^"]*)"/gm;
+
+            this.messageIndices = [];
+            this.serviceCenters = [];
+            this.dates = [];
+            this.senders = [];
+            this.messages = [];
+            let match;
+            let lastIndex = null;
+
+            while ((match = cmglRegex.exec(data)) !== null) {
+              const index = parseInt(match[1]);
+              const sender = match[2].startsWith("003") ?
+                this.convertDecToText(this.convertHexToText(match[2])) :
+                this.convertHexToText(match[2]);
+              const date = this.parseCustomDate(match[3].replace(/\+\d{2}$/, ""));
+              if (isNaN(date)) {
+                continue;
+              }
+              const startIndex = cmglRegex.lastIndex;
+              const endIndex = data.indexOf("+CMGL:", startIndex) !== -1 ? data.indexOf("+CMGL:", startIndex) : data.indexOf("OK");
+              const messageHex = data.substring(startIndex, endIndex).replace(/[\n\r\t]/gm, "").trim();
+              const message = /^[0-9a-fA-F]+$/.test(messageHex) ? this.convertHexToText(messageHex) : messageHex;
+              if (lastIndex !== null && this.messages[lastIndex].sender === sender && (date - this.messages[lastIndex].date) / 1000 <= 1) {
+                this.messages[lastIndex].text += message;
+                this.messages[lastIndex].indices.push(index);
+                this.dates[lastIndex] = date.toLocaleString();
+              } else {
+                this.messageIndices.push([index]);
+                this.senders.push(sender);
+                this.dates.push(date.toLocaleString());
+                this.messages.push({ text: message, sender: sender, date: date, indices: [index] });
+                lastIndex = this.messages.length - 1;
+              }
+            }
+
+            while ((match = cscaRegex.exec(data)) !== null) {
+              const serviceCenterHex = match[1];
+              const serviceCenter = this.convertHexToText(serviceCenterHex);
+              this.serviceCenters.push(serviceCenter);
+            }
+          },
+
+          convertHexToText(hex) {
+            const bytes = new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            return new TextDecoder('utf-16be').decode(bytes);
+          },
+          convertDecToText(dec) {
+            const bytes = new Uint8Array(dec.match(/[12][0-9][0-9]|[1-9][0-9]/g).map(byte => parseInt(byte, 10)));
+            return new TextDecoder('ascii').decode(bytes);
+          },
+
+          parseCustomDate(dateStr) {
+            const [datePart, timePart] = dateStr.split(',');
+            const [day, month, year] = datePart.split('/').map(part => parseInt(part, 10));
+            const [hour, minute, second] = timePart.split(':').map(part => parseInt(part, 10));
+
+            return new Date(Date.UTC(2000 + year, month - 1, day, hour, minute, second));
+          },
+
+          deleteSelectedSMS() {
+            if (this.selectedMessages.length === 0) {
+              console.warn("No messages were selected");
+              return;
+            }
+            if (!this.messageIndices || this.messageIndices.length === 0) {
+              console.error("No messages found in inbox");
+              return;
+            }
+
+            const isAllSelected = this.selectedMessages.length === this.messages.length;
+
+            if (isAllSelected) {
+              this.deleteAllSMS();
+            } else {
+              const indicesToDelete = [];
+              this.selectedMessages.forEach(index => {
+                indicesToDelete.push(...this.messages[index].indices);
+              });
+              if (indicesToDelete.length === 0) {
+                console.warn("Error while scanning messages: no messages found to delete; were they removed from other window?");
+                return;
+              }
+
+              const atCommands = indicesToDelete.map((index, i) => i === 0 ? `AT+CMGD=${index}` : `+CMGD=${index}`).join(';');
+              fetch(`/cgi-bin/get_atcommand?${new URLSearchParams({ cmd: atCommands })}`)
+                .finally(() => {
+                  this.selectedMessages = [];
+                  this.requestSMS();
+                });
+            }
+          },
+          deleteAllSMS() {
+            fetch(`/cgi-bin/get_atcommand?${new URLSearchParams({ cmd: "AT+CMGD=,4" })}`)
+              .finally(() => {
+                this.init();
+              });
+          },
+
+          // Initialize
+          init() {
+            this.clearData();
+            this.requestSMS();
+          },
+
+          // Select all
+          toggleAll(event) {
+            this.selectedMessages = event.target.checked ? this.messages.map((_, index) => index) : [];
+          }
+        };
+      }
+    </script>
+  </body>
+</html>

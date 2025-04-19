@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QuecAdmin :: Settings</title>
+    <!-- Import all the bootstrap css files from css folder -->
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
+
+    <!-- Logo -->
+    <link rel="simpleadmin-logo" href="favicon.ico" />
+
+    <!--  Import BootStrap Javascript -->
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/alpinejs.min.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <div class="container my-4" x-data="simpleSettings()">
+        <nav class="navbar navbar-expand-lg mt-2">
+          <div class="container-fluid">
+            <a class="navbar-brand" href="/"
+              ><span class="mb-0 h4">QuecAdmin</span></a
+            >
+            <button
+              class="navbar-toggler"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#navbarText"
+              aria-controls="navbarText"
+              aria-expanded="false"
+              aria-label="Toggle navigation"
+            >
+              <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarText">
+              <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                  <a class="nav-link" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/network.html">Network</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/scanner.html">Scan</a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    class="nav-link active"
+                    href="/settings.html"
+                    aria-current="page"
+                    >Settings</a
+                  >
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/sms.html">SMS</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/deviceinfo.html"
+                    >Device Information</a
+                  >
+                </li>
+              </ul>
+              <span class="navbar-text">
+                <button class="btn btn-link text-reset" id="darkModeToggle">
+                  Dark Mode
+                </button>
+              </span>
+            </div>
+          </div>
+        </nav>
+
+        <div class="row mt-5 mb-4">
+          <div class="col">
+            <div class="card">
+              <div class="card-header">AT Terminal</div>
+              <div class="card-body">
+                <div class="card-text">
+                  <div class="form-floating mb-4">
+                    <!-- At commands output here -->
+                    <textarea
+                      class="form-control"
+                      id="atOutputBox"
+                      style="height: 210px"
+                      x-text="atCommandResponse"
+                      readonly
+                    >
+                    </textarea>
+                  </div>
+                  <div>
+                    <div class="mb-3">
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="atCommandInput"
+                        placeholder="ATI"
+                        aria-describedby="atCommandInput"
+                        x-model="atCmd"
+                        @keydown.enter="sendATCommand()"
+                      />
+                      <div id="atCommandInputHelper" class="form-text">
+                        You can sperate multiple commands with semicolon (AT+GMI;+GMM).
+                      </div>
+                    </div>
+                    <div
+                      class="d-grid gap-2 d-md-flex justify-content-md-start"
+                    >
+                      <button
+                        class="btn btn-primary me-md-2"
+                        type="button"
+                        @click="sendATCommand()"
+                        :disabled="isLoading"
+                      >
+                        Submit
+                      </button>
+                      <button
+                        class="btn btn-danger"
+                        type="button"
+                        @click="clearResponses()"
+                        :disabled="isClean"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <div class="card">
+              <div class="card-header">One-click Utilities</div>
+              <div class="card-body">
+                <div class="card-text">
+                  <div class="table-responsive">
+                    <table class="table">
+                      <tbody>
+                        <tr>
+                          <th scope="row">Reboot</th>
+                          <td colspan="2">
+                            <button
+                              type="submit"
+                              class="btn btn-warning"
+                              @click="showRebootModal()"
+                              :disabled="isLoading"
+                            >
+                              Reboot
+                            </button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <th scope="row">Factory Reset</th>
+                          <td colspan="2">
+                            <button
+                              type="submit"
+                              class="btn btn-danger"
+                              @click="factoryReset()"
+                              :disabled="isLoading"
+                            >
+                              Reset
+                            </button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <th scope="row">Functional State</th>
+                          <td>
+                            <select
+                              class="form-select"
+                              id="cfunState"
+                              x-model="CFUNState"
+                            >
+                              <option
+                                value="Unspecified"
+                                selected hidden
+                                x-text="currentCFUNState === '-' ? 'Fetching...' : 'Current: ' + currentCFUNState"
+                              ></option>
+                              <option value="1">Normal</option>
+                              <option value="4">Airplane mode</option>
+                            </select>
+                          </td>
+                          <td>
+                            <button
+                              type="submit"
+                              class="btn btn-primary"
+                              @click="CFUNStateChanger()"
+                              :disabled="isLoading"
+                            >
+                              Change
+                            </button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <th scope="row">Network Mode</th>
+                          <td>
+                            <select
+                              class="form-select"
+                              id="ipPassModeSelect"
+                              x-model="ipPassMode"
+                            >
+                              <option
+                                value="Unspecified"
+                                selected hidden
+                                x-text="currentIpPassMode === '-' ? 'Fetching...' : 'Current: ' + currentIpPassMode"
+                              ></option>
+                              <option value="-1">None (MBIM/RMNET)</option>
+                              <option value="0">NAT (ETH/ECM/RNDIS)</option>
+                              <option value="1">IPPT (ETH)</option>
+                              <option value="3">IPPT (ECM/RNDIS)</option>
+                            </select>
+                          </td>
+                          <td>
+                            <button
+                              type="submit"
+                              class="btn btn-primary"
+                              @click="ipPassThroughChanger()"
+                              :disabled="isLoading"
+                            >
+                              Change
+                            </button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <th scope="row">USB Protocol</th>
+                          <td>
+                            <select
+                              class="form-select"
+                              id="usbNetModeSelect"
+                              x-model="usbNetMode"
+                            >
+                              <option
+                                value="Unspecified"
+                                selected hidden
+                                x-text="currentUsbNetMode === '-' ? 'Fetching...' : 'Current: ' + currentUsbNetMode"
+                              ></option>
+                              <option value="RMNET">RMNET</option>
+                              <option value="ECM">ECM (Recommended)</option>
+                              <option value="MBIM">MBIM</option>
+                              <option value="RNDIS">RNDIS</option>
+                            </select>
+                          </td>
+                          <td>
+                            <button
+                              type="submit"
+                              class="btn btn-primary"
+                              @click="usbNetModeChanger()"
+                              :disabled="isLoading"
+                            >
+                              Change
+                            </button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <th scope="row">Onboard DNS Proxy</th>
+                          <td colspan="2">
+                            <button
+                              type="submit"
+                              class="btn btn-success"
+                              @click="onBoardDNSProxyEnable()"
+                              x-show="DNSProxyStatus === false"
+                              :disabled="isLoading"
+                            >
+                              Enable
+                            </button>
+                            <button
+                              type="submit"
+                              class="btn btn-danger"
+                              @click="onBoardDNSProxyDisable()"
+                              x-show="DNSProxyStatus === true"
+                              :disabled="isLoading"
+                            >
+                              Disable
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading Modal for Reboot -->
+        <div class="modal-overlay" x-show="showModal">
+          <div class="loading-modal">
+            <div
+              class="loading-text"
+              style="display: flex; flex-direction: column"
+            >
+              <h3>This will reboot the modem.</h3>
+              <p style="margin-top: 0.5rem">Continue?</p>
+            </div>
+            <div class="d-grid gap-2 d-md-block">
+              <button
+                class="btn btn-primary"
+                type="button"
+                @click="rebootDevice()"
+              >
+                Reboot
+              </button>
+              <button
+                class="btn btn-danger"
+                type="button"
+                @click="closeModal()"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reboot Modal Countdown -->
+        <div class="modal-overlay" x-show="isRebooting">
+          <div class="loading-modal">
+            <div class="loader"></div>
+            <div
+              class="loading-text"
+              style="display: flex; flex-direction: column"
+            >
+              <h3>Rebooting...</h3>
+              <p style="margin-top: 0.5rem">
+                Please wait for
+                <span x-text="countdown" style="font-weight: 500"></span>
+                seconds.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script src="js/dark-mode.js"></script>
+    <script>
+      function simpleSettings() {
+        return {
+          isLoading: true,
+          isClean: true,
+          showModal: false,
+          isRebooting: false,
+          countdown: 0,
+          atCmd: "",
+          atCommandResponse: "",
+          currentApnID: 0,
+          currentIpPassMode: "-",
+          currentUsbNetMode: "-",
+          currentCFUNState: "-",
+          ipPassMode: "Unspecified",
+          usbNetMode: "Unspecified",
+          CFUNState: "Unspecified",
+          DNSProxyStatus: true,
+
+          closeModal() {
+            this.confirmModal = false;
+            this.showModal = false;
+          },
+
+          showRebootModal() {
+            this.showModal = true;
+          },
+
+          async sendATCommand() {
+            await fetch(`/cgi-bin/get_atcommand?cmd=${encodeURIComponent(this.atCmd ? this.atCmd : 'ATI')}&timeout=15`)
+              .then((res) => {
+                return res.text();
+              })
+              .then((data) => {
+                this.atCommandResponse = data.replace("\r", "").trim();
+                this.isClean = false;
+
+                this.fetchCurrentSettings();
+              })
+              .catch((error) => {
+                console.error(error);
+              });
+          },
+
+          clearResponses() {
+            this.atCommandResponse = "";
+            this.isClean = true;
+          },
+
+          rebootDevice() {
+            this.atCmd = "AT+CFUN=1,1";
+            this.sendATCommand();
+
+            this.showModal = false;
+            this.isRebooting = true;
+            this.countdown = 60;
+
+            // Do the countdown
+            const interval = setInterval(() => {
+              this.countdown--;
+              if (this.countdown === 0) {
+                clearInterval(interval);
+                this.isRebooting = false;
+                this.init();
+              }
+            }, 1000);
+          },
+
+          factoryReset() {
+            this.atCmd = "AT&F";
+            this.sendATCommand().then(() => {
+              this.rebootDevice();
+            });
+          },
+
+          ipPassThroughChanger() {
+            if (this.ipPassMode != "Unspecified") {
+              this.atCmd = 
+                this.ipPassMode == -1 ? 
+                  'AT+QMAP="MPDN_rule",0;+QMAPWAC=0' :
+                  `AT+QMAP="MPDN_rule",0,${this.currentApnID},0,${this.ipPassMode},1,"FF:FF:FF:FF:FF:FF";+QMAPWAC=1`;
+                this.sendATCommand().then(() => {
+                  this.fetchCurrentSettings();
+                });
+            }
+          },
+
+          CFUNStateChanger() {
+            if (this.CFUNState != "Unspecified") {
+              this.atCmd = `AT+CFUN=${this.CFUNState}`;
+              this.sendATCommand().then(() => {
+                this.fetchCurrentSettings();
+              });
+            }
+          },
+
+          onBoardDNSProxyEnable() {
+            this.atCmd = 'AT+QMAP="DHCPV4DNS","enable"';
+            this.sendATCommand().then(() => {
+              this.fetchCurrentSettings();
+            });
+          },
+
+          onBoardDNSProxyDisable() {
+            this.atCmd = 'AT+QMAP="DHCPV4DNS","disable"';
+            this.sendATCommand().then(() => {
+              this.fetchCurrentSettings();
+            });
+          },
+
+          usbNetModeChanger() {
+            if (this.usbNetMode != "Unspecified") {
+              if (this.usbNetMode == "RMNET") {
+                this.atCmd = 'AT+QCFG="usbnet",0;';
+              } else if (this.usbNetMode == "ECM") {
+                this.atCmd = 'AT+QCFG="usbnet",1;';
+              } else if (this.usbNetMode == "MBIM") {
+                this.atCmd = 'AT+QCFG="usbnet",2;';
+              } else if (this.usbNetMode == "RNDIS") {
+                this.atCmd = 'AT+QCFG="usbnet",3;';
+              } else {
+                console.log(`Invalid USB protocol type - ${this.usbNetMode}`);
+                return;
+              }
+              this.sendATCommand().then(() => {
+                this.rebootDevice();
+              });
+            }
+          },
+
+          fetchCurrentSettings() {
+            fetch(
+              "/cgi-bin/get_atcommand?" +
+                new URLSearchParams({
+                  cmd: 'AT+CFUN?;+CGCONTRDP;+QMAP="MPDN_RULE";+QMAP="DHCPV4DNS";+QCFG="usbnet"',
+                })
+            )
+              .then((res) => {
+                return res.text();
+              })
+              .then((data) => {
+                const rawdata = data.replace("\r", "").trim();
+                const lines = rawdata.split("\r\n");
+
+                console.log(lines);
+
+                const testCFUNState = lines
+                  .find((line) => line.includes('+CFUN: '))
+                  .match(/\+CFUN: (\d)/);
+
+                if (testCFUNState[1] == "0") {
+                  this.currentCFUNState = "Minimal";
+                } else if (testCFUNState[1] == "1") {
+                  this.currentCFUNState = "Normal";
+                } else if (testCFUNState[1] == "4") {
+                  this.currentCFUNState = "Airplane mode";
+                } else if (testCFUNState[1] == "5") {
+                  this.currentCFUNState = "FTM";
+                } else if (testCFUNState[1] == "7") {
+                  this.currentCFUNState = "Shutdown";
+                } else {
+                  this.currentCFUNState = `Unknown (${testCFUNState[1]})`;
+                }
+
+                try {
+                  this.currentApnID = lines
+                    .find((line) => line.includes('+CGCONTRDP: '))
+                    .match(/\+CGCONTRDP: (\d+),(\d+),"([a-zA-Z0-9_\-.]+)",/)[1]; // cid, bearer_id, apn
+                } catch (error) {
+                  console.log(error);
+
+                  this.currentApnID = 1;
+                }
+
+                const testEthpass = lines
+                  .find((line) => line.includes('+QMAP: "MPDN_rule"'))
+                  .match(/\+QMAP: "MPDN_rule",0,(\d),(\d),(\d),(\d)/); // profileID, IPPT_status, connect_status
+
+                if (testEthpass[1] == "0") {
+                  this.currentIpPassMode = "None (MBIM/RMNET)";
+                } else if (testEthpass[3] == "0") {
+                  this.currentIpPassMode = "NAT (ETH/ECM/RNDIS)";
+                } else if(testEthpass[3] == "1") {
+                  this.currentIpPassMode = "IPPT (ETH)";
+                } else if(testEthpass[3] == "2") {
+                  this.currentIpPassMode = "IPPT (ECM/RNDIS)";
+                } else {
+                  this.currentIpPassMode = `Unknown (${testEthpass[3]})`;
+                }
+
+                const testDNSProxy = lines
+                  .find((line) => line.includes('+QMAP: "DHCPV4DNS"'))
+                  .match(/\+QMAP: "DHCPV4DNS","enable"/);
+
+                if (testDNSProxy) {
+                  this.DNSProxyStatus = true;
+                } else {
+                  this.DNSProxyStatus = false;
+                }
+
+                const testUSBNet = lines
+                  .find((line) => line.includes('+QCFG: "usbnet"'))
+                  .match(/\+QCFG: "usbnet",(\d)/); // net
+
+                if (testUSBNet[1] == "0") {
+                  this.currentUsbNetMode = "RMNET";
+                } else if (testUSBNet[1] == "1") {
+                  this.currentUsbNetMode = "ECM";
+                } else if (testUSBNet[1] == "2") {
+                  this.currentUsbNetMode = "MBIM";
+                } else if (testUSBNet[1] == "3") {
+                  this.currentUsbNetMode = "RNDIS";
+                } else {
+                  this.currentUsbNetMode = `Unknown (${testUSBNet[1]})`;
+                }
+
+                this.atCmd = "";
+                this.isLoading = false;
+              })
+              .catch((error) => {
+                console.error(error);
+              });
+          },
+
+          init() {
+            this.fetchCurrentSettings();
+          },
+        };
+      }
+    </script>
+  </body>
+</html>

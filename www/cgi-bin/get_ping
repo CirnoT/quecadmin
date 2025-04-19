@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if ping -c 1 8.8.8.8 >/dev/null; then
+    RESULT="OK"
+else
+    RESULT="ERROR"
+fi
+
+echo "Content-Type: text/plain"
+echo "Content-Length: ${#RESULT}"
+echo "Cache-Control: no-cache, no-store"
+echo "Connection: close"
+echo ""
+echo -n "$RESULT"

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QuecAdmin :: Device Information</title>
+    <!-- Import all the bootstrap css files from css folder -->
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
+
+    <!-- Logo -->
+    <link rel="simpleadmin-logo" href="favicon.ico" />
+
+    <!--  Import BootStrap Javascript -->
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/alpinejs.min.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <div class="container my-4" x-data="fetchDeviceInfo()">
+        <nav class="navbar navbar-expand-lg mt-2">
+          <div class="container-fluid">
+            <a class="navbar-brand" href="/"
+              ><span class="mb-0 h4">QuecAdmin</span></a
+            >
+            <button
+              class="navbar-toggler"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#navbarText"
+              aria-controls="navbarText"
+              aria-expanded="false"
+              aria-label="Toggle navigation"
+            >
+              <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarText">
+              <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                  <a class="nav-link" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/network.html">Network</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/scanner.html">Scan</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/settings.html">Settings</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/sms.html">SMS</a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    class="nav-link active"
+                    href="/deviceinfo.html"
+                    aria-current="page"
+                    >Device Information</a
+                  >
+                </li>
+              </ul>
+              <span class="navbar-text">
+                <button class="btn btn-link text-reset" id="darkModeToggle">
+                  Dark Mode
+                </button>
+              </span>
+            </div>
+          </div>
+        </nav>
+
+        <div class="row mt-5 gap-3">
+          <div class="col">
+            <div class="card">
+              <div class="card-header">Device Information</div>
+              <div class="card-body">
+                <div class="card-text">
+                  <div class="table-responsive">
+                    <table class="table">
+                      <tbody>
+                        <tr>
+                          <th scope="row">Manufacturer</th>
+                          <td x-text="manufacturer"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row">Model Name</th>
+                          <td x-text="modelName"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row">Firmware version</th>
+                          <td
+                            class="col-md-2"
+                            x-bind:title="longfirmwareVer"
+                            x-text="shortfirmwareVer"
+                            style="
+                              text-decoration: underline;
+                              text-decoration-style: dotted;
+                            "></td>
+                        </tr>
+                        <tr>
+                          <th scope="row">IMEI</th>
+                          <td class="col-md-2" x-text="imei"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row">IMSI</th>
+                          <td class="col-md-2" x-text="imsi"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row">UICC</th>
+                          <td class="col-md-2" x-text="iccid"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row">Phone Number</th>
+                          <td class="col-md-2" x-text="phoneNumber"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row">LAN IP</th>
+                          <td class="col-md-2" x-text="lanIp"></td>
+                        </tr>
+                        <tr x-show="wwanIpv4 != '0.0.0.0'">
+                          <th scope="row">WWAN IPv<sup>4</sup></th>
+                          <td class="col-md-2" x-text="wwanIpv4"></td>
+                        </tr>
+                        <tr x-show="wwanIpv6 != '0:0:0:0:0:0:0:0'">
+                          <th scope="row">WWAN IPv<sup>6</sup></th>
+                          <td class="col-md-2" x-text="wwanIpv6"></td>
+                        </tr>
+                        <tr>
+                          <th scope="row">Uptime</th>
+                          <td class="col-md-2" x-text="uptime"></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script src="js/dark-mode.js"></script>
+    <script>
+      function fetchDeviceInfo() {
+        return {
+          manufacturer: "-",
+          modelName: "-",
+          shortfirmwareVer: "-",
+          longfirmwareVer: "-",
+          imsi: "-",
+          iccid: "-",
+          imei: "-",
+          lanIp: "-",
+          wwanIpv4: "0.0.0.0",
+          wwanIpv6: "0:0:0:0:0:0:0:0",
+          uptime: "-",
+          phoneNumber: "N/A",
+          isLoading: false,
+
+          fetchDeviceInfo() {
+            this.isLoading = true;
+            fetch(
+              "/cgi-bin/get_atcommand?" +
+                new URLSearchParams({
+                  cmd: 'AT+CGMI;+CGMM;+GMR;+QGMR;+CIMI;+ICCID;+CGSN;+QMAP="LANIP";+QMAP="WWAN";+CNUM',
+                })
+            )
+              .then((res) => {
+                return res.text();
+              })
+              .then((data) => {
+                this.parseFetchedData(data.replace("\r", "").trim());
+              })
+              .catch((error) => {
+                console.error(error);
+                this.showError = true;
+              });
+          },
+
+          fetchUptime() {
+            fetch("/cgi-bin/get_uptime")
+              .then((response) => response.text())
+              .then((data) => {
+                const date = new Date(data * 1000);
+
+                const days = date.getUTCDate() - 1;
+                const hours = date.getUTCHours();
+                const minutes = date.getUTCMinutes();
+
+                let segments = [];
+
+                if (days > 0) segments.push(days + ' day' + ((days == 1) ? '' : 's'));
+                if (hours > 0) segments.push(hours + ' hour' + ((hours == 1) ? '' : 's'));
+                if (minutes > 0) segments.push(minutes + ' minute' + ((minutes == 1) ? '' : 's'));
+
+                this.uptime = segments.join(', ');
+              });
+          },
+
+          parseFetchedData(rawdata) {
+            const lines = rawdata.split("\r\n");
+            console.log(lines);
+
+            this.manufacturer = lines[2].trim();
+            this.modelName = lines[4].trim();
+            this.shortfirmwareVer = lines[6].trim();
+            this.longfirmwareVer = lines[8].trim();
+            this.imei = lines[14].trim();
+            this.lanIp = lines[16].trim().split(",")[3];
+            this.wwanIpv4 = lines[18].trim().split(",")[4].replace(/"/g, "");
+            this.wwanIpv6 = lines[19].trim().split(",")[4].replace(/"/g, "");
+
+            try {
+              this.imsi = lines[10].trim();
+              this.iccid = lines[12].trim().replace("+ICCID: ", "").replace("F", "");
+              this.phoneNumber = lines[21]
+                .trim()
+                .split(",")[1]
+                .replace(/"/g, "");
+
+              if (this.phoneNumber === "") {
+                this.phoneNumber = "N/A";
+              }
+            } catch (error) {
+              this.phoneNumber = "N/A";
+              this.imsi = "N/A";
+              this.iccid = "N/A";
+            }
+
+            this.isLoading = false;
+          },
+
+          init() {
+            this.fetchUptime();
+            this.fetchDeviceInfo();
+          },
+        };
+      }
+    </script>
+  </body>
+</html>

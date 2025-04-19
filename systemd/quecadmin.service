@@ -1,0 +1,11 @@
+[Unit]
+Description=QuecAdmin HTTPd Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/httpd -f -u www-data:dialout -h /usrdata/quecadmin/www
+ExecStop=/bin/kill -WINCH ${MAINPID}
+
+[Install]
+WantedBy=multi-user.target
