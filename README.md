@@ -39,7 +39,7 @@ Modules with newer firmware versions can additionally benefit from Secure Debugg
 
 OK
 
-> AT+QSECCFG="dbg_pwd",3,"<password>"
+> AT+QSECCFG="dbg_pwd",2,"<password>"
 OK
 
 > AT+QSECCFG="dbg_pwd"
